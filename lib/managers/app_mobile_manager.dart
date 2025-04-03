@@ -3,7 +3,18 @@ import 'package:flutter_app_server/database/database_helper.dart';
 import 'package:flutter_app_server/models/app_mobile.dart';
 
 class AppMobileManager {
+  // Liste des applications authentifiées
   final List<AppMobile> authenticatedApps = [];
+
+  // Constructeur privé pour empêcher l'instanciation directe
+  static final AppMobileManager _instance = AppMobileManager._internal();
+
+  // Factory pour accéder à l'instance unique
+  factory AppMobileManager() {
+    // Si l'instance n'est pas encore créée, la créer
+    return _instance;
+  }
+  AppMobileManager._internal();
 
   // Génération d'une clé d'application aléatoire
   String _generateAppKey() {
@@ -61,10 +72,10 @@ class AppMobileManager {
     final app = await getAppById(id);
     if (app == null) return false;
 
-    //Déconnecter l'application en premier
+    // Déconnecter l'application en premier
     disconnectApp(id);
 
-    //Ensuite, supprimer de la base de données
+    // Ensuite, supprimer de la base de données
     await DatabaseHelper().deleteAppById(id);
 
     return true;

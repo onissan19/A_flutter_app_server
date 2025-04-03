@@ -1,11 +1,6 @@
-// SPDX-FileCopyrightText: 2025 Benoit Rolandeau <benoit.rolandeau@allcircuits.com>
-//
-// SPDX-License-Identifier: MIT
-
 import 'dart:async';
-
 import 'package:flutter_app_server/managers/global_manager.dart';
-import 'package:flutter_app_server/models/http_log.dart';
+import 'package:flutter_app_server/models/thing.dart';
 import 'package:flutter/material.dart';
 
 /// Home page of the app
@@ -22,22 +17,24 @@ class HomePage extends StatefulWidget {
 
 /// State of the home page
 class _HomePageState extends State<HomePage> {
-  /// Subscription to the log stream
-  StreamSubscription? _logSubscription;
-
-  /// List of logs
-  final List<HttpLog> _logs;
+  /// List of Things
+  List<Thing> _things = [];
 
   /// Default constructor
-  _HomePageState() : _logs = [];
+  _HomePageState();
 
   @override
   void initState() {
     super.initState();
-    _logSubscription = GlobalManager.instance.httpLoggingManager.logStream.listen((log) {
-      setState(() {
-        _logs.add(log);
-      });
+    _fetchThings();
+  }
+
+  // Fonction pour récupérer les Things depuis le ThingsManager
+  Future<void> _fetchThings() async {
+    // Utiliser ThingsManager pour récupérer les objets de la base de données
+    List<Thing> things = await GlobalManager.instance.thingsManager.getAllThingsFromDatabase();
+    setState(() {
+      _things = things; // Mettre à jour l'état avec la liste des Things
     });
   }
 
@@ -47,20 +44,23 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(backgroundColor: theme.colorScheme.inversePrimary, title: Text(widget.title)),
-      body: ListView(
-        children: _logs.map((log) => ListTile(title: Text(log.formattedLogMsg))).toList(),
+      body: ListView.builder(
+        itemCount: _things.length,
+        itemBuilder: (context, index) {
+          final thing = _things[index];
+          return ListTile(
+            title: Text(thing.id), // Vous pouvez afficher d'autres propriétés selon votre modèle
+            subtitle: Text('Type: ${thing.type}, Registered: ${thing.isRegistered}'),
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => setState(_logs.clear),
-        tooltip: '(TR) Clear',
+        onPressed: () => setState(() {
+          _things.clear(); // Clear the list
+        }),
+        tooltip: 'Clear',
         child: const Icon(Icons.clear),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    unawaited(_logSubscription?.cancel());
-    super.dispose();
   }
 }

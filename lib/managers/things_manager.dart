@@ -3,7 +3,19 @@ import 'package:flutter_app_server/database/database_helper.dart';
 import 'package:flutter_app_server/models/thing.dart';
 
 class ThingsManager {
+  // Liste des objets enregistrés
   final List<Thing> registeredThings = [];
+
+  // Instance unique du singleton
+  static final ThingsManager _instance = ThingsManager._internal();
+
+  // Factory constructeur pour retourner l'instance unique
+  factory ThingsManager() {
+    return _instance;
+  }
+
+  // Constructeur privé pour empêcher l'instanciation en dehors de la classe
+  ThingsManager._internal();
 
   // Génération d'une clé API aléatoire
   String generateApiKey() {

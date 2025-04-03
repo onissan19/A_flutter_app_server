@@ -8,7 +8,7 @@ library;
 final serverHostname = "0.0.0.0";
 
 /// This is the server port for the http mobile app server
-const mobileAppServerPort = 3000;
+const mobileAppServerPort = 4000;
 
 /// This is the server port for the http things server
-const thingsServerPort = 3001;
+const thingsServerPort = 4001;

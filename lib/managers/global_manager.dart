@@ -1,13 +1,10 @@
-// SPDX-FileCopyrightText: 2025 Benoit Rolandeau <benoit.rolandeau@allcircuits.com>
-//
-// SPDX-License-Identifier: MIT
-
 import 'package:flutter_app_server/database/database_helper.dart';
 import 'package:flutter_app_server/managers/abstract_manager.dart';
 import 'package:flutter_app_server/managers/http_logging_manager.dart';
 import 'package:flutter_app_server/managers/http_server_manager.dart';
 import 'package:flutter_app_server/managers/logger_manager.dart';
 import 'package:flutter_app_server/managers/things_manager.dart';
+import 'package:flutter_app_server/managers/app_mobile_manager.dart';
 
 /// The global manager manages:
 /// - the global state of the application
@@ -28,6 +25,12 @@ class GlobalManager extends AbstractManager {
   /// Instance of the database helper (Singleton)
   final DatabaseHelper databaseHelper;
 
+  /// Instance of the ThingsManager (Singleton)
+  final ThingsManager thingsManager;
+
+  /// Instance of the AppMobileManager (Singleton)
+  final AppMobileManager appMobileManager;
+
   /// Instance getter
   /// Create a new instance if it does not exist
   static GlobalManager get instance {
@@ -40,7 +43,9 @@ class GlobalManager extends AbstractManager {
       : loggerManager = LoggerManager(),
         httpLoggingManager = HttpLoggingManager(),
         httpServerManager = HttpServerManager(),
-        databaseHelper = DatabaseHelper(); // 🔹 Singleton de la DB
+        databaseHelper = DatabaseHelper(), // Singleton de la DB
+        thingsManager = ThingsManager(), // Instanciation du singleton ThingsManager
+        appMobileManager = AppMobileManager(); // Instanciation du singleton AppMobileManager
 
   /// Initialize the global manager
   /// Also create and initialize the other managers
@@ -56,12 +61,8 @@ class GlobalManager extends AbstractManager {
     // Then, we initialize the http logging manager to be able to use it in the http server manager
     await httpLoggingManager.initialize();
 
+    // Initialisation des gestionnaires HTTP et autres
     await httpServerManager.initialize();
-
-    final ThingsManager thingsManager = ThingsManager();
-    await thingsManager.populateDatabase(10);
-
-    await thingsManager.printAllThings();
   }
 
   /// Dispose the global manager and the linked managers
