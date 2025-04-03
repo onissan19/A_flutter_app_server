@@ -6,7 +6,7 @@ class ThingsManager {
   final List<Thing> registeredThings = [];
 
   // Génération d'une clé API aléatoire
-  String _generateApiKey() {
+  String generateApiKey() {
     final random = Random();
     return List.generate(
       32,
