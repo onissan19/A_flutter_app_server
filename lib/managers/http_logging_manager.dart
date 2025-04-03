@@ -4,9 +4,9 @@
 
 import 'dart:async';
 
-import 'package:esaip_lessons_server/managers/abstract_manager.dart';
-import 'package:esaip_lessons_server/managers/global_manager.dart';
-import 'package:esaip_lessons_server/models/http_log.dart';
+import 'package:flutter_app_server/managers/abstract_manager.dart';
+import 'package:flutter_app_server/managers/global_manager.dart';
+import 'package:flutter_app_server/models/http_log.dart';
 
 /// This class is used to manage the logging of http requests
 class HttpLoggingManager extends AbstractManager {

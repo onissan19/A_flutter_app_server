@@ -2,10 +2,12 @@
 //
 // SPDX-License-Identifier: MIT
 
-import 'package:esaip_lessons_server/managers/abstract_manager.dart';
-import 'package:esaip_lessons_server/managers/http_logging_manager.dart';
-import 'package:esaip_lessons_server/managers/http_server_manager.dart';
-import 'package:esaip_lessons_server/managers/logger_manager.dart';
+import 'package:flutter_app_server/database/database_helper.dart';
+import 'package:flutter_app_server/managers/abstract_manager.dart';
+import 'package:flutter_app_server/managers/http_logging_manager.dart';
+import 'package:flutter_app_server/managers/http_server_manager.dart';
+import 'package:flutter_app_server/managers/logger_manager.dart';
+import 'package:flutter_app_server/managers/things_manager.dart';
 
 /// The global manager manages:
 /// - the global state of the application
@@ -23,8 +25,10 @@ class GlobalManager extends AbstractManager {
   /// Instance of the http server manager
   final HttpServerManager httpServerManager;
 
+  /// Instance of the database helper (Singleton)
+  final DatabaseHelper databaseHelper;
+
   /// Instance getter
-  ///
   /// Create a new instance if it does not exist
   static GlobalManager get instance {
     _instance ??= GlobalManager();
@@ -33,15 +37,18 @@ class GlobalManager extends AbstractManager {
 
   /// Default constructor
   GlobalManager()
-    : loggerManager = LoggerManager(),
-      httpLoggingManager = HttpLoggingManager(),
-      httpServerManager = HttpServerManager();
+      : loggerManager = LoggerManager(),
+        httpLoggingManager = HttpLoggingManager(),
+        httpServerManager = HttpServerManager(),
+        databaseHelper = DatabaseHelper(); // 🔹 Singleton de la DB
 
   /// Initialize the global manager
-  ///
   /// Also create and initialize the other managers
   @override
   Future<void> initialize() async {
+    // 🔹 Initialisation de la base de données
+    await databaseHelper.init();
+
     // We initialize the logger manager first, to be able to log the initialization of the other
     // managers
     await loggerManager.initialize();
@@ -50,13 +57,18 @@ class GlobalManager extends AbstractManager {
     await httpLoggingManager.initialize();
 
     await httpServerManager.initialize();
+
+    final ThingsManager thingsManager = ThingsManager();
+    await thingsManager.populateDatabase(10);
+
+    await thingsManager.printAllThings();
   }
 
   /// Dispose the global manager and the linked managers
   @override
   Future<void> dispose() async => Future.wait([
-    loggerManager.dispose(),
-    httpLoggingManager.dispose(),
-    httpServerManager.dispose(),
-  ]);
+        loggerManager.dispose(),
+        httpLoggingManager.dispose(),
+        httpServerManager.dispose(),
+      ]);
 }

@@ -4,11 +4,11 @@
 
 import 'dart:io';
 
-import 'package:esaip_lessons_server/data/server_constants.dart' as server_constants;
-import 'package:esaip_lessons_server/managers/abstract_manager.dart';
-import 'package:esaip_lessons_server/managers/global_manager.dart';
-import 'package:esaip_lessons_server/managers/http_logging_manager.dart';
-import 'package:esaip_lessons_server/models/http_log.dart';
+import 'package:flutter_app_server/data/server_constants.dart' as server_constants;
+import 'package:flutter_app_server/managers/abstract_manager.dart';
+import 'package:flutter_app_server/managers/global_manager.dart';
+import 'package:flutter_app_server/managers/http_logging_manager.dart';
+import 'package:flutter_app_server/models/http_log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:shelf/shelf.dart';

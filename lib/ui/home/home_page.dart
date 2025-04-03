@@ -4,8 +4,8 @@
 
 import 'dart:async';
 
-import 'package:esaip_lessons_server/managers/global_manager.dart';
-import 'package:esaip_lessons_server/models/http_log.dart';
+import 'package:flutter_app_server/managers/global_manager.dart';
+import 'package:flutter_app_server/models/http_log.dart';
 import 'package:flutter/material.dart';
 
 /// Home page of the app

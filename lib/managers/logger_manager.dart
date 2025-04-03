@@ -4,9 +4,9 @@
 
 import 'dart:ui';
 
-import 'package:esaip_lessons_server/data/logger_constants.dart' as logger_constants;
-import 'package:esaip_lessons_server/managers/abstract_manager.dart';
-import 'package:esaip_lessons_server/models/app_log_printer.dart';
+import 'package:flutter_app_server/data/logger_constants.dart' as logger_constants;
+import 'package:flutter_app_server/managers/abstract_manager.dart';
+import 'package:flutter_app_server/models/app_log_printer.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 

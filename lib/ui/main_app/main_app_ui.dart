@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
-import 'package:esaip_lessons_server/ui/home/home_page.dart';
+import 'package:flutter_app_server/ui/home/home_page.dart';
 import 'package:flutter/material.dart';
 
 /// Main application widget

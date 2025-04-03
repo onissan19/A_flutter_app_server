@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
-import 'package:esaip_lessons_server/managers/global_manager.dart';
-import 'package:esaip_lessons_server/ui/main_app/main_app_ui.dart';
+import 'package:flutter_app_server/managers/global_manager.dart';
+import 'package:flutter_app_server/ui/main_app/main_app_ui.dart';
 import 'package:flutter/material.dart';
 
 /// Main function to run the app
