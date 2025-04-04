@@ -3,13 +3,16 @@
 // SPDX-License-Identifier: MIT
 
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_app_server/data/server_constants.dart' as server_constants;
 import 'package:flutter_app_server/managers/abstract_manager.dart';
 import 'package:flutter_app_server/managers/global_manager.dart';
 import 'package:flutter_app_server/managers/http_logging_manager.dart';
+import 'package:flutter_app_server/models/app_mobile.dart';
 import 'package:flutter_app_server/models/http_log.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_app_server/models/thing.dart';
 import 'package:logger/logger.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
@@ -56,15 +59,27 @@ class HttpServerManager extends AbstractManager {
     _thingsServer = result[1];
   }
 
-  /// Initialize the mobile app router
-  Future<void> _initMobileAppRouter(Router app) async {
-    app.get(formatVersion1Route(_helloRoute), _getHello);
-  }
+/// Initialize the mobile app router
+Future<void> _initMobileAppRouter(Router app) async {
+  app.get(formatVersion1Route(_helloRoute), _getHello);
 
-  /// Initialize the things app router
-  Future<void> _initThingsAppRouter(Router app) async {
-    app.get(formatVersion1Route(_helloRoute), _getHello);
-  }
+  // Route pour enregistrer une application mobile
+  app.post(formatVersion1Route("register"), _registerAppMobile);
+
+  // Route pour authentifier une application mobile
+  app.post(formatVersion1Route("authenticate"), _authenticateAppMobile);
+}
+
+/// Initialize the things app router
+Future<void> _initThingsAppRouter(Router app) async {
+  app.get(formatVersion1Route(_helloRoute), _getHello);
+
+  // Route pour enregistrer un Thing
+  app.post(formatVersion1Route("register"), _registerThing);
+
+  // Route pour authentifier un Thing
+  app.post(formatVersion1Route("authenticate"), _authenticateThing);
+}
 
   /// Initialize the server
   Future<HttpServer> _initServer({
@@ -89,6 +104,96 @@ class HttpServerManager extends AbstractManager {
 
     return server;
   }
+
+
+  Future<Response> _registerAppMobile(Request request) async {
+  final body = await request.readAsString();
+  final jsonData = jsonDecode(body) as Map<String, dynamic>;
+  
+
+  if (!(jsonData.containsKey("id") && jsonData.containsKey("name"))) {
+    return Response.badRequest(body: "Missing required fields: id, name");
+  }
+
+  final app = AppMobile(
+    id: jsonData["id"] as String,
+    name: jsonData["name"] as String,
+    appKey: GlobalManager.instance.appMobileManager.generateAppKey(),
+    isAuth: false,
+    timestamp: DateTime.now(),
+  );
+
+  final success = await GlobalManager.instance.appMobileManager.registerApp(app);
+  
+  if (success) {
+    return Response.ok(jsonEncode({"message": "App registered successfully", "appKey": app.appKey}));
+  } else {
+    return Response.badRequest(body: jsonEncode({"error": "App already registered","appKey": app.appKey}));
+  }
+}
+
+
+Future<Response> _authenticateAppMobile(Request request) async {
+  final body = await request.readAsString();
+  final jsonData = jsonDecode(body) as Map<String, dynamic>;
+
+  if (!jsonData.containsKey("id") || !jsonData.containsKey("appKey")) {
+    return Response.badRequest(body: "Missing required fields: id, appKey");
+  }
+
+  final success = await GlobalManager.instance.appMobileManager.authenticateApp(jsonData["id"] as String, jsonData["appKey"] as String);
+  
+  if (success) {
+    return Response.ok(jsonEncode({"message": "Authentication successful"}));
+  } else {
+    return Response.unauthorized(jsonEncode({"error": "Invalid credentials"}));
+  }
+}
+
+Future<Response> _registerThing(Request request) async {
+  final body = await request.readAsString();
+  final jsonData = jsonDecode(body) as Map<String, dynamic>;
+
+  if (!jsonData.containsKey("id") || !jsonData.containsKey("type")) {
+    return Response.badRequest(body: "Missing required fields: id, type");
+  }
+
+  final thing = Thing(
+    id: jsonData["id"] as String,
+    type: jsonData["type"] as String,
+    apiKey: GlobalManager.instance.thingsManager.generateApiKey(),
+    isRegistered: true,
+     timestamp: DateTime.now(),
+  );
+
+  final success = await GlobalManager.instance.thingsManager.registerThing(thing);
+  
+  if (success) {
+    return Response.ok(jsonEncode({"message": "Thing registered successfully","appKey": thing.apiKey}));
+  } else {
+    return Response.badRequest(body: jsonEncode({"error": "Thing already registered"}));
+  }
+}
+
+Future<Response> _authenticateThing(Request request) async {
+  final body = await request.readAsString();
+  final jsonData = jsonDecode(body) as Map<String, dynamic>;
+
+  if (!jsonData.containsKey("id") && !jsonData.containsKey("apiKey")) {
+    return Response.badRequest(body: "Missing required field: id or apikey");
+  }
+
+  
+  final response = await GlobalManager.instance.thingsManager.authenticateThing(jsonData["id"] as String, jsonData["apiKey"] as String);
+
+  if (response) {
+    return Response.ok(jsonEncode({"message": "Thing authenticated"}));
+  } else {
+    return Response.unauthorized(jsonEncode({"error": "Thing not found"}));
+  }
+}
+
+
 
   /// Route to handle the hello request
   Future<Response> _getHello(Request request) =>

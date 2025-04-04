@@ -18,7 +18,7 @@ class DatabaseHelper {
   // Initialisation de la base de données
   Future<void> init() async {
     if (_database == null) {
-      sqfliteFfiInit(); // 🔹 Nécessaire pour les plateformes desktop
+      sqfliteFfiInit(); //
       databaseFactory = databaseFactoryFfi;
       _database = await _initDatabase();
     }

@@ -1,12 +1,30 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter_app_server/database/database_helper.dart';
 import 'package:flutter_app_server/models/app_mobile.dart';
 
 class AppMobileManager {
+  // Liste des applications authentifiées
   final List<AppMobile> authenticatedApps = [];
 
+  // StreamController pour notifier les changements
+  final StreamController<List<AppMobile>> _appsStreamController = StreamController.broadcast();
+
+  // Getter pour écouter les changements
+  Stream<List<AppMobile>> get appsStream => _appsStreamController.stream;
+
+  // Constructeur privé pour empêcher l'instanciation directe
+  static final AppMobileManager _instance = AppMobileManager._internal();
+
+  // Factory pour accéder à l'instance unique
+  factory AppMobileManager() {
+    return _instance;
+  }
+
+  AppMobileManager._internal();
+
   // Génération d'une clé d'application aléatoire
-  String _generateAppKey() {
+  String generateAppKey() {
     final random = Random();
     return List.generate(
       32,
@@ -30,13 +48,26 @@ class AppMobileManager {
       return false; // L'application est déjà enregistrée
     }
 
-    app.appKey = _generateAppKey();
-    app.isAuth = true;
+    app.isAuth = false;
     app.timestamp = DateTime.now();
 
     await DatabaseHelper().insertAppMobile(app);
+    _notifyListeners(); // Notifier les changements
+
     return true;
   }
+
+ Future<bool> isConnected(String id) async{
+    final app = await getAppById(id);
+    if (app != null) {
+      if (authenticatedApps.contains(app)) {
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
 
   // Authentifier une application mobile
   Future<bool> authenticateApp(String id, String appKey) async {
@@ -45,6 +76,7 @@ class AppMobileManager {
       app.isAuth = true;
       if (!authenticatedApps.contains(app)) {
         authenticatedApps.add(app);
+        _notifyListeners(); // Notifier les changements
       }
       return true;
     }
@@ -54,6 +86,7 @@ class AppMobileManager {
   // Déconnecter une application mobile (la retirer de la liste des authentifiées)
   void disconnectApp(String id) {
     authenticatedApps.removeWhere((app) => app.id == id);
+    _notifyListeners(); //Notifier les changements
   }
 
   // Désenregistrer une application mobile (supprime aussi les données associées)
@@ -61,12 +94,13 @@ class AppMobileManager {
     final app = await getAppById(id);
     if (app == null) return false;
 
-    //Déconnecter l'application en premier
+    // Déconnecter l'application en premier
     disconnectApp(id);
 
-    //Ensuite, supprimer de la base de données
+    // Ensuite, supprimer de la base de données
     await DatabaseHelper().deleteAppById(id);
 
+    _notifyListeners(); // Notifier après suppression
     return true;
   }
 
@@ -86,7 +120,7 @@ class AppMobileManager {
     return AppMobile(
       id: 'app_${random.nextInt(1000)}',
       name: 'App ${random.nextInt(100)}',
-      appKey: '',
+      appKey: generateAppKey(),
       isAuth: false,
       timestamp: DateTime.now(),
     );
@@ -98,6 +132,7 @@ class AppMobileManager {
       final app = generateRandomApp();
       await registerApp(app);
     }
+    _notifyListeners(); // Notifier après ajout en masse
   }
 
   // Afficher toutes les applications mobiles enregistrées
@@ -111,5 +146,15 @@ class AppMobileManager {
         print(app);
       }
     }
+  }
+
+  // Notifier les abonnés en cas de mise à jour de la liste
+  void _notifyListeners() {
+    _appsStreamController.add(List.unmodifiable(authenticatedApps));
+  }
+
+  // Fermer le StreamController quand on n'en a plus besoin
+  void dispose() {
+    _appsStreamController.close();
   }
 }

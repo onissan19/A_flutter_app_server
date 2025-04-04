@@ -1,44 +1,22 @@
-// SPDX-FileCopyrightText: 2025 Benoit Rolandeau <benoit.rolandeau@allcircuits.com>
-//
-// SPDX-License-Identifier: MIT
-
-import 'dart:async';
-
-import 'package:flutter_app_server/managers/global_manager.dart';
-import 'package:flutter_app_server/models/http_log.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app_server/managers/global_manager.dart';
+import 'package:flutter_app_server/models/thing.dart';
+import 'package:flutter_app_server/models/app_mobile.dart';
 
-/// Home page of the app
 class HomePage extends StatefulWidget {
-  /// Title of the home page
   const HomePage({super.key, required this.title});
 
-  /// Title of the home page
   final String title;
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-/// State of the home page
 class _HomePageState extends State<HomePage> {
-  /// Subscription to the log stream
-  StreamSubscription? _logSubscription;
-
-  /// List of logs
-  final List<HttpLog> _logs;
-
-  /// Default constructor
-  _HomePageState() : _logs = [];
-
   @override
   void initState() {
     super.initState();
-    _logSubscription = GlobalManager.instance.httpLoggingManager.logStream.listen((log) {
-      setState(() {
-        _logs.add(log);
-      });
-    });
+    // Tu peux mettre ici un appel pour initialiser ou récupérer des données.
   }
 
   @override
@@ -47,20 +25,90 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(backgroundColor: theme.colorScheme.inversePrimary, title: Text(widget.title)),
-      body: ListView(
-        children: _logs.map((log) => ListTile(title: Text(log.formattedLogMsg))).toList(),
+      body: Column(
+        children: [
+          // Première partie : Liste des Things
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: StreamBuilder<List<Thing>>(
+                stream: GlobalManager.instance.thingsManager.thingsStream,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final things = snapshot.data!;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Things',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: things.length,
+                          itemBuilder: (context, index) {
+                            final thing = things[index];
+                            return ListTile(
+                              title: Text(thing.id),
+                              subtitle: Text('Type: ${thing.type}, Registered: ${thing.isRegistered}'),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+          
+          // Deuxième partie : Liste des AppMobiles
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: StreamBuilder<List<AppMobile>>(
+                stream: GlobalManager.instance.appMobileManager.appsStream,
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final apps = snapshot.data!;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'AppMobiles',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: apps.length,
+                          itemBuilder: (context, index) {
+                            final app = apps[index];
+                            return ListTile(
+                              title: Text(app.name),
+                              subtitle: Text('ID: ${app.id}, Auth: ${app.isAuth}'),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => setState(_logs.clear),
-        tooltip: '(TR) Clear',
+        onPressed: () {
+          // Action flottante pour nettoyer les listes ou toute autre fonctionnalité
+        },
+        tooltip: 'Clear',
         child: const Icon(Icons.clear),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    unawaited(_logSubscription?.cancel());
-    super.dispose();
   }
 }
