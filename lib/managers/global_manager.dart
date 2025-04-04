@@ -3,6 +3,7 @@ import 'package:flutter_app_server/managers/abstract_manager.dart';
 import 'package:flutter_app_server/managers/http_logging_manager.dart';
 import 'package:flutter_app_server/managers/http_server_manager.dart';
 import 'package:flutter_app_server/managers/logger_manager.dart';
+import 'package:flutter_app_server/managers/socket_server_manager.dart';
 import 'package:flutter_app_server/managers/things_manager.dart';
 import 'package:flutter_app_server/managers/app_mobile_manager.dart';
 
@@ -31,6 +32,9 @@ class GlobalManager extends AbstractManager {
   /// Instance of the AppMobileManager (Singleton)
   final AppMobileManager appMobileManager;
 
+  /// 
+  final SocketServerManager socketServerManager;
+
   /// Instance getter
   /// Create a new instance if it does not exist
   static GlobalManager get instance {
@@ -45,7 +49,8 @@ class GlobalManager extends AbstractManager {
         httpServerManager = HttpServerManager(),
         databaseHelper = DatabaseHelper(), // Singleton de la DB
         thingsManager = ThingsManager(), // Instanciation du singleton ThingsManager
-        appMobileManager = AppMobileManager(); // Instanciation du singleton AppMobileManager
+        appMobileManager = AppMobileManager(), // Instanciation du singleton AppMobileManager
+        socketServerManager= SocketServerManager();
 
   /// Initialize the global manager
   /// Also create and initialize the other managers
@@ -63,6 +68,8 @@ class GlobalManager extends AbstractManager {
 
     // Initialisation des gestionnaires HTTP et autres
     await httpServerManager.initialize();
+
+    await socketServerManager.initialize();
   }
 
   /// Dispose the global manager and the linked managers
@@ -71,5 +78,6 @@ class GlobalManager extends AbstractManager {
         loggerManager.dispose(),
         httpLoggingManager.dispose(),
         httpServerManager.dispose(),
+        socketServerManager.dispose(),
       ]);
 }

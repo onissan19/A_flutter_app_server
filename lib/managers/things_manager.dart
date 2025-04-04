@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter_app_server/database/database_helper.dart';
 import 'package:flutter_app_server/models/thing.dart';
@@ -5,6 +6,12 @@ import 'package:flutter_app_server/models/thing.dart';
 class ThingsManager {
   // Liste des objets enregistrés
   final List<Thing> registeredThings = [];
+
+  // StreamController pour notifier les changements
+  final StreamController<List<Thing>> _thingsStreamController = StreamController.broadcast();
+
+  // Getter pour écouter les changements
+  Stream<List<Thing>> get thingsStream => _thingsStreamController.stream;
 
   // Instance unique du singleton
   static final ThingsManager _instance = ThingsManager._internal();
@@ -42,12 +49,14 @@ class ThingsManager {
       return false; // L'objet est déjà enregistré en base
     }
     await DatabaseHelper().insertThing(thing);
+    _notifyListeners(); // Notifier les changements
     return true;
   }
 
   // Déconnecter un Thing (le retirer de la liste)
   void disconnectThing(String id) {
     registeredThings.removeWhere((thing) => thing.id == id);
+    _notifyListeners(); // Notifier les changements
   }
 
   // Authentification d'un Thing via son ID et sa clé API
@@ -57,6 +66,7 @@ class ThingsManager {
       thing.isRegistered = true; // Authentification réussie
       if (!registeredThings.contains(thing)) {
         registeredThings.add(thing);
+        _notifyListeners(); //Notifier les changements
       }
       return true;
     }
@@ -86,6 +96,7 @@ class ThingsManager {
       final thing = generateRandomThing();
       await registerThing(thing);
     }
+    _notifyListeners(); // Notifier après ajout en masse
   }
 
   // Désenregistrer un objet (supprime aussi les télémétries)
@@ -93,13 +104,26 @@ class ThingsManager {
     final thing = await DatabaseHelper().getThingById(id);
     if (thing == null) return false;
 
-    // 1️⃣ Déconnecter d'abord l'objet
+    // Déconnecter d'abord l'objet
     disconnectThing(id);
 
-    // 2️⃣ Ensuite, supprimer de la base de données
+    // Ensuite, supprimer de la base de données
     await DatabaseHelper().deleteThingWithTelemetry(id);
 
+    _notifyListeners(); //Notifier après suppression
     return true;
+  }
+
+
+   Future<bool> isConnected(String id) async{
+    final thing = await getThingById(id);
+    if (thing != null) {
+      if (registeredThings.contains(thing)) {
+        return true;
+      }
+      return false;
+    }
+    return false;
   }
 
   // Récupérer tous les objets connectés
@@ -118,5 +142,15 @@ class ThingsManager {
         print(thing);
       }
     }
+  }
+
+  // Notifier les abonnés en cas de mise à jour de la liste
+  void _notifyListeners() {
+    _thingsStreamController.add(List.unmodifiable(registeredThings));
+  }
+
+  // Fermer le StreamController quand on n'en a plus besoin
+  void dispose() {
+    _thingsStreamController.close();
   }
 }

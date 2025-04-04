@@ -12,3 +12,8 @@ const mobileAppServerPort = 4000;
 
 /// This is the server port for the http things server
 const thingsServerPort = 4001;
+
+const socketMobileAppServerPort = 5000;
+
+/// This is the server port for the http things server
+const socketThingsServerPort = 5001;
