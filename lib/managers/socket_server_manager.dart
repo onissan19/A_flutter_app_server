@@ -5,7 +5,6 @@ import 'package:flutter_app_server/data/server_constants.dart'
     as server_constants;
 import 'package:flutter_app_server/managers/abstract_manager.dart';
 import 'package:flutter_app_server/managers/global_manager.dart';
-import 'package:flutter_app_server/managers/http_logging_manager.dart';
 import 'package:flutter_app_server/models/http_log.dart';
 import 'package:flutter_app_server/models/telemetry_data.dart';
 import 'package:logger/logger.dart';
@@ -135,7 +134,6 @@ class SocketServerManager extends AbstractManager {
             );
             GlobalManager.instance.httpLoggingManager.addLog(connectionLog);
             if (message['type'] == 'telemetry') {
-              _logger.i('Donnée télémetrique ajoutée : $message');
               try {
                 final dataMap = message['data'];
                 final data = TelemetryData(
