@@ -7,23 +7,23 @@ import 'package:flutter_app_server/managers/socket_server_manager.dart';
 import 'package:flutter_app_server/managers/things_manager.dart';
 import 'package:flutter_app_server/managers/app_mobile_manager.dart';
 
-/// The global manager manages:
+/// The global manager handles:
 /// - the global state of the application
-/// - the initialization of the other managers
+/// - the initialization of all other managers
 class GlobalManager extends AbstractManager {
-  /// Instance of the global manager
+  /// Singleton instance of the GlobalManager
   static GlobalManager? _instance;
 
-  /// Instance of the logger manager
+  /// Instance of the LoggerManager
   final LoggerManager loggerManager;
 
-  /// Instance of the http logging manager
+  /// Instance of the HttpLoggingManager
   final HttpLoggingManager httpLoggingManager;
 
-  /// Instance of the http server manager
+  /// Instance of the HttpServerManager
   final HttpServerManager httpServerManager;
 
-  /// Instance of the database helper (Singleton)
+  /// Instance of the DatabaseHelper (Singleton)
   final DatabaseHelper databaseHelper;
 
   /// Instance of the ThingsManager (Singleton)
@@ -32,11 +32,11 @@ class GlobalManager extends AbstractManager {
   /// Instance of the AppMobileManager (Singleton)
   final AppMobileManager appMobileManager;
 
-  /// 
+  /// Instance of the SocketServerManager (Singleton)
   final SocketServerManager socketServerManager;
 
-  /// Instance getter
-  /// Create a new instance if it does not exist
+  /// Singleton getter
+  /// Creates a new instance if one does not already exist
   static GlobalManager get instance {
     _instance ??= GlobalManager();
     return _instance!;
@@ -47,32 +47,32 @@ class GlobalManager extends AbstractManager {
       : loggerManager = LoggerManager(),
         httpLoggingManager = HttpLoggingManager(),
         httpServerManager = HttpServerManager(),
-        databaseHelper = DatabaseHelper(), // Singleton de la DB
-        thingsManager = ThingsManager(), // Instanciation du singleton ThingsManager
-        appMobileManager = AppMobileManager(), // Instanciation du singleton AppMobileManager
-        socketServerManager= SocketServerManager();
+        databaseHelper = DatabaseHelper(), // Singleton instance of the database
+        thingsManager = ThingsManager(), // Singleton instance of ThingsManager
+        appMobileManager = AppMobileManager(), // Singleton instance of AppMobileManager
+        socketServerManager = SocketServerManager();
 
-  /// Initialize the global manager
-  /// Also create and initialize the other managers
+  /// Initializes the global manager
+  /// Also initializes all dependent managers
   @override
   Future<void> initialize() async {
-    // 🔹 Initialisation de la base de données
+    // 🔹 Initialize the local database
     await databaseHelper.init();
 
-    // We initialize the logger manager first, to be able to log the initialization of the other
-    // managers
+    // Initialize the logger first so that other managers can log during setup
     await loggerManager.initialize();
 
-    // Then, we initialize the http logging manager to be able to use it in the http server manager
+    // Then initialize the HTTP logging manager so it can be used by the HTTP server manager
     await httpLoggingManager.initialize();
 
-    // Initialisation des gestionnaires HTTP et autres
+    // Initialize the HTTP server and other components
     await httpServerManager.initialize();
 
+    // Initialize the socket server
     await socketServerManager.initialize();
   }
 
-  /// Dispose the global manager and the linked managers
+  /// Disposes the global manager and all dependent managers
   @override
   Future<void> dispose() async => Future.wait([
         loggerManager.dispose(),

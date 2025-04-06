@@ -1,15 +1,20 @@
 class TelemetryData {
+  /// Unique identifier for the telemetry data
   int id;
-  // ignore: public_member_api_docs
+
+  /// Identifier for the related thing
   String thingId;
-  // ignore: public_member_api_docs
+
+  /// The type/category of the telemetry data
   String type;
-  // ignore: public_member_api_docs
+
+  /// The recorded value for this telemetry data
   String value;
-  // ignore: public_member_api_docs
+
+  /// Timestamp representing when the telemetry data was recorded
   DateTime timestamp;
 
-  // ignore: public_member_api_docs
+  /// Constructor for the [TelemetryData] class
   TelemetryData({
     required this.id,
     required this.thingId,
@@ -18,25 +23,26 @@ class TelemetryData {
     required this.timestamp,
   });
 
-  // Convertir en Map pour l'enregistrement en base de données
-  // ignore: public_member_api_docs
+  /// Converts this object into a [Map] for database storage
   Map<String, Object?> toMap() => {
-      'id': id,
-      'thingId': thingId,
-      'type': type,
-      'value': value,
-      'timestamp': timestamp.millisecondsSinceEpoch, // Stocké en tant qu'entier
-    };
+        'id': id,
+        'thingId': thingId,
+        'type': type,
+        'value': value,
+        'timestamp': timestamp.millisecondsSinceEpoch, // Stored as an integer
+      };
 
-  // Créer un objet depuis un Map (récupération depuis la base de données)
+  /// Creates a [TelemetryData] object from a [Map] (retrieved from the database)
   factory TelemetryData.fromMap(Map<String, Object?> map) => TelemetryData(
-      id: map['id']! as int,
-      thingId: map['thingId']! as String,
-      type: map['type']! as String,
-      value: map['value']! as String,
-      timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp']! as int),
-    );
+        id: map['id']! as int,
+        thingId: map['thingId']! as String,
+        type: map['type']! as String,
+        value: map['value']! as String,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp']! as int),
+      );
 
   @override
-  String toString() => 'TelemetryData{id: $id, thingId: $thingId, type: $type, value: $value, timestamp: $timestamp}';
+  /// Returns a string representation of the [TelemetryData] object
+  String toString() =>
+      'TelemetryData{id: $id, thingId: $thingId, type: $type, value: $value, timestamp: $timestamp}';
 }

@@ -23,9 +23,7 @@ import 'package:uuid/uuid.dart';
 /// It will create a server and listen to the requests
 class HttpServerManager extends AbstractManager {
   static const _api = "api";
-
   static const _version1 = "v1";
-
   static const _helloRoute = "hello";
 
   /// Instance of the http mobile app server
@@ -42,6 +40,7 @@ class HttpServerManager extends AbstractManager {
   Future<void> initialize() async {
     _httpLoggingManager = GlobalManager.instance.httpLoggingManager;
 
+    // Initialize both mobile app server and things server
     final result = await Future.wait([
       _initServer(
         serverPort: server_constants.mobileAppServerPort,
@@ -55,33 +54,36 @@ class HttpServerManager extends AbstractManager {
       ),
     ]);
 
+    // Assign the servers to respective variables
     _mobileAppServer = result[0];
     _thingsServer = result[1];
   }
 
-/// Initialize the mobile app router
-Future<void> _initMobileAppRouter(Router app) async {
-  app.get(formatVersion1Route(_helloRoute), _getHello);
+  /// Initialize the mobile app router with routes
+  Future<void> _initMobileAppRouter(Router app) async {
+    // Route to check if the server is working
+    app.get(formatVersion1Route(_helloRoute), _getHello);
 
-  // Route pour enregistrer une application mobile
-  app.post(formatVersion1Route("register"), _registerAppMobile);
+    // Route for registering a mobile app
+    app.post(formatVersion1Route("register"), _registerAppMobile);
 
-  // Route pour authentifier une application mobile
-  app.post(formatVersion1Route("authenticate"), _authenticateAppMobile);
-}
+    // Route for authenticating a mobile app
+    app.post(formatVersion1Route("authenticate"), _authenticateAppMobile);
+  }
 
-/// Initialize the things app router
-Future<void> _initThingsAppRouter(Router app) async {
-  app.get(formatVersion1Route(_helloRoute), _getHello);
+  /// Initialize the things app router with routes
+  Future<void> _initThingsAppRouter(Router app) async {
+    // Route to check if the server is working
+    app.get(formatVersion1Route(_helloRoute), _getHello);
 
-  // Route pour enregistrer un Thing
-  app.post(formatVersion1Route("register"), _registerThing);
+    // Route for registering a Thing (IoT device)
+    app.post(formatVersion1Route("register"), _registerThing);
 
-  // Route pour authentifier un Thing
-  app.post(formatVersion1Route("authenticate"), _authenticateThing);
-}
+    // Route for authenticating a Thing
+    app.post(formatVersion1Route("authenticate"), _authenticateThing);
+  }
 
-  /// Initialize the server
+  /// Initialize the server with provided configurations
   Future<HttpServer> _initServer({
     required int serverPort,
     required String serverName,
@@ -89,8 +91,10 @@ Future<void> _initThingsAppRouter(Router app) async {
   }) async {
     final appRouter = Router();
 
+    // Initialize the routes for the server
     await initRoute(appRouter);
 
+    // Start the server and log the server start
     final server = await io.serve(appRouter.call, server_constants.serverHostname, serverPort);
     _httpLoggingManager.addLog(
       HttpLog.now(
@@ -105,107 +109,118 @@ Future<void> _initThingsAppRouter(Router app) async {
     return server;
   }
 
-
+  /// Handle the registration of a mobile app
   Future<Response> _registerAppMobile(Request request) async {
-  final body = await request.readAsString();
-  final jsonData = jsonDecode(body) as Map<String, dynamic>;
-  
+    final body = await request.readAsString();
+    final jsonData = jsonDecode(body) as Map<String, dynamic>;
 
-  if (!(jsonData.containsKey("id") && jsonData.containsKey("name"))) {
-    return Response.badRequest(body: "Missing required fields: id, name");
+    // Check for required fields: id and name
+    if (!(jsonData.containsKey("id") && jsonData.containsKey("name"))) {
+      return Response.badRequest(body: "Missing required fields: id, name");
+    }
+
+    // Create a new AppMobile instance and register it
+    final app = AppMobile(
+      id: jsonData["id"] as String,
+      name: jsonData["name"] as String,
+      appKey: GlobalManager.instance.appMobileManager.generateAppKey(),
+      isAuth: false,
+      timestamp: DateTime.now(),
+    );
+
+    final success = await GlobalManager.instance.appMobileManager.registerApp(app);
+
+    // Respond based on the success or failure of registration
+    if (success) {
+      return Response.ok(jsonEncode({"message": "App registered successfully", "appKey": app.appKey}));
+    } else {
+      return Response.badRequest(body: jsonEncode({"error": "App already registered", "appKey": app.appKey}));
+    }
   }
 
-  final app = AppMobile(
-    id: jsonData["id"] as String,
-    name: jsonData["name"] as String,
-    appKey: GlobalManager.instance.appMobileManager.generateAppKey(),
-    isAuth: false,
-    timestamp: DateTime.now(),
-  );
+  /// Handle the authentication of a mobile app
+  Future<Response> _authenticateAppMobile(Request request) async {
+    final body = await request.readAsString();
+    final jsonData = jsonDecode(body) as Map<String, dynamic>;
 
-  final success = await GlobalManager.instance.appMobileManager.registerApp(app);
-  
-  if (success) {
-    return Response.ok(jsonEncode({"message": "App registered successfully", "appKey": app.appKey}));
-  } else {
-    return Response.badRequest(body: jsonEncode({"error": "App already registered","appKey": app.appKey}));
-  }
-}
+    // Check for required fields: id and appKey
+    if (!jsonData.containsKey("id") || !jsonData.containsKey("appKey")) {
+      return Response.badRequest(body: "Missing required fields: id, appKey");
+    }
 
+    // Authenticate the mobile app using the provided id and appKey
+    final success = await GlobalManager.instance.appMobileManager.authenticateApp(jsonData["id"] as String, jsonData["appKey"] as String);
 
-Future<Response> _authenticateAppMobile(Request request) async {
-  final body = await request.readAsString();
-  final jsonData = jsonDecode(body) as Map<String, dynamic>;
-
-  if (!jsonData.containsKey("id") || !jsonData.containsKey("appKey")) {
-    return Response.badRequest(body: "Missing required fields: id, appKey");
+    // Respond based on the success or failure of authentication
+    if (success) {
+      return Response.ok(jsonEncode({"message": "Authentication successful"}));
+    } else {
+      return Response.unauthorized(jsonEncode({"error": "Invalid credentials"}));
+    }
   }
 
-  final success = await GlobalManager.instance.appMobileManager.authenticateApp(jsonData["id"] as String, jsonData["appKey"] as String);
-  
-  if (success) {
-    return Response.ok(jsonEncode({"message": "Authentication successful"}));
-  } else {
-    return Response.unauthorized(jsonEncode({"error": "Invalid credentials"}));
-  }
-}
+  /// Handle the registration of a Thing (IoT device)
+  Future<Response> _registerThing(Request request) async {
+    final body = await request.readAsString();
+    final jsonData = jsonDecode(body) as Map<String, dynamic>;
 
-Future<Response> _registerThing(Request request) async {
-  final body = await request.readAsString();
-  final jsonData = jsonDecode(body) as Map<String, dynamic>;
+    // Check for required fields: id and type
+    if (!jsonData.containsKey("id") || !jsonData.containsKey("type")) {
+      return Response.badRequest(body: "Missing required fields: id, type");
+    }
 
-  if (!jsonData.containsKey("id") || !jsonData.containsKey("type")) {
-    return Response.badRequest(body: "Missing required fields: id, type");
-  }
+    // Create a new Thing instance and register it
+    final thing = Thing(
+      id: jsonData["id"] as String,
+      type: jsonData["type"] as String,
+      apiKey: GlobalManager.instance.thingsManager.generateApiKey(),
+      isRegistered: true,
+      timestamp: DateTime.now(),
+    );
 
-  final thing = Thing(
-    id: jsonData["id"] as String,
-    type: jsonData["type"] as String,
-    apiKey: GlobalManager.instance.thingsManager.generateApiKey(),
-    isRegistered: true,
-     timestamp: DateTime.now(),
-  );
+    final success = await GlobalManager.instance.thingsManager.registerThing(thing);
 
-  final success = await GlobalManager.instance.thingsManager.registerThing(thing);
-  
-  if (success) {
-    return Response.ok(jsonEncode({"message": "Thing registered successfully","appKey": thing.apiKey}));
-  } else {
-    return Response.badRequest(body: jsonEncode({"error": "Thing already registered"}));
-  }
-}
-
-Future<Response> _authenticateThing(Request request) async {
-  final body = await request.readAsString();
-  final jsonData = jsonDecode(body) as Map<String, dynamic>;
-
-  if (!jsonData.containsKey("id") && !jsonData.containsKey("apiKey")) {
-    return Response.badRequest(body: "Missing required field: id or apikey");
+    // Respond based on the success or failure of registration
+    if (success) {
+      return Response.ok(jsonEncode({"message": "Thing registered successfully", "appKey": thing.apiKey}));
+    } else {
+      return Response.badRequest(body: jsonEncode({"error": "Thing already registered"}));
+    }
   }
 
-  
-  final response = await GlobalManager.instance.thingsManager.authenticateThing(jsonData["id"] as String, jsonData["apiKey"] as String);
+  /// Handle the authentication of a Thing (IoT device)
+  Future<Response> _authenticateThing(Request request) async {
+    final body = await request.readAsString();
+    final jsonData = jsonDecode(body) as Map<String, dynamic>;
 
-  if (response) {
-    return Response.ok(jsonEncode({"message": "Thing authenticated"}));
-  } else {
-    return Response.unauthorized(jsonEncode({"error": "Thing not found"}));
+    // Check for required fields: id or apiKey
+    if (!jsonData.containsKey("id") && !jsonData.containsKey("apiKey")) {
+      return Response.badRequest(body: "Missing required field: id or apiKey");
+    }
+
+    // Authenticate the Thing using the provided id and apiKey
+    final response = await GlobalManager.instance.thingsManager.authenticateThing(jsonData["id"] as String, jsonData["apiKey"] as String);
+
+    // Respond based on the success or failure of authentication
+    if (response) {
+      return Response.ok(jsonEncode({"message": "Thing authenticated"}));
+    } else {
+      return Response.unauthorized(jsonEncode({"error": "Thing not found"}));
+    }
   }
-}
-
-
 
   /// Route to handle the hello request
   Future<Response> _getHello(Request request) =>
       _logRequest(request, (requestId) async => Response.ok('Hello, World!'));
 
-  /// Useful method to wraps the request handling with logging
+  /// Useful method to wrap the request handling with logging
   Future<Response> _logRequest(
     Request request,
     Future<Response> Function(String requestId) handler,
   ) async {
     final requestId = shortHash(const Uuid().v1());
 
+    // Log the incoming request
     _httpLoggingManager.addLog(
       HttpLog.now(
         requestId: requestId,
@@ -216,6 +231,8 @@ Future<Response> _authenticateThing(Request request) async {
       ),
     );
     final response = await handler(requestId);
+
+    // Log the response status code
     _httpLoggingManager.addLog(
       HttpLog.now(
         requestId: requestId,
@@ -230,6 +247,7 @@ Future<Response> _authenticateThing(Request request) async {
 
   /// Close the given [server]
   Future<void> _closeServer(HttpServer server) async {
+    // Log the server closure
     _httpLoggingManager.addLog(
       HttpLog.now(
         requestId: "server-close",
@@ -248,6 +266,7 @@ Future<Response> _authenticateThing(Request request) async {
   /// {@macro abstract_manager.dispose}
   @override
   Future<void> dispose() async {
+    // Close both the mobile app and things servers
     await Future.wait([_closeServer(_mobileAppServer), _closeServer(_thingsServer)]);
   }
 }
