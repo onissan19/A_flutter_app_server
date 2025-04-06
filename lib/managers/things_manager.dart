@@ -3,28 +3,27 @@ import 'dart:math';
 import 'package:flutter_app_server/database/database_helper.dart';
 import 'package:flutter_app_server/models/thing.dart';
 
+/// Manages registered "Thing" objects and their interactions
 class ThingsManager {
-  // Liste des objets enregistrés
+  /// List of registered objects
   final List<Thing> registeredThings = [];
 
-  // StreamController pour notifier les changements
+  /// StreamController to notify changes in the list of registered objects
   final StreamController<List<Thing>> _thingsStreamController = StreamController.broadcast();
 
-  // Getter pour écouter les changements
+  /// Stream to listen for changes in the list of registered objects
   Stream<List<Thing>> get thingsStream => _thingsStreamController.stream;
 
-  // Instance unique du singleton
+  /// Singleton instance of [ThingsManager]
   static final ThingsManager _instance = ThingsManager._internal();
 
-  // Factory constructeur pour retourner l'instance unique
-  factory ThingsManager() {
-    return _instance;
-  }
+  /// Factory constructor to return the singleton instance
+  factory ThingsManager() => _instance;
 
-  // Constructeur privé pour empêcher l'instanciation en dehors de la classe
+  /// Private constructor to prevent instantiation from outside the class
   ThingsManager._internal();
 
-  // Génération d'une clé API aléatoire
+  /// Generates a random API key
   String generateApiKey() {
     final random = Random();
     return List.generate(
@@ -33,7 +32,7 @@ class ThingsManager {
     ).join();
   }
 
-  // Récupérer un Thing par ID (d'abord dans la liste, sinon dans la base)
+  /// Retrieves a "Thing" by its ID (checks the list first, then the database)
   Future<Thing?> getThingById(String id) async {
     for (var thing in registeredThings) {
       if (thing.id == id) {
@@ -43,42 +42,40 @@ class ThingsManager {
     return await DatabaseHelper().getThingById(id);
   }
 
-  // Enregistrer un nouvel objet
+  /// Registers a new "Thing"
   Future<bool> registerThing(Thing thing) async {
     if (await DatabaseHelper().getThingById(thing.id) != null) {
-      return false; // L'objet est déjà enregistré en base
+      return false; // The object is already registered in the database
     }
     await DatabaseHelper().insertThing(thing);
-    _notifyListeners(); // Notifier les changements
+    _notifyListeners(); // Notify changes
     return true;
   }
 
-  // Déconnecter un Thing (le retirer de la liste)
+  /// Disconnects a "Thing" (removes it from the list)
   void disconnectThing(String id) {
     registeredThings.removeWhere((thing) => thing.id == id);
-    _notifyListeners(); // Notifier les changements
+    _notifyListeners(); // Notify changes
   }
 
-  // Authentification d'un Thing via son ID et sa clé API
+  /// Authenticates a "Thing" by its ID and API key
   Future<bool> authenticateThing(String id, String apiKey) async {
     final thing = await getThingById(id);
     if (thing != null && thing.apiKey == apiKey) {
-      thing.isRegistered = true; // Authentification réussie
+      thing.isRegistered = true; // Authentication successful
       if (!registeredThings.contains(thing)) {
         registeredThings.add(thing);
-        _notifyListeners(); //Notifier les changements
+        _notifyListeners(); // Notify changes
       }
       return true;
     }
     return false;
   }
 
-  // Récupérer tous les objets de la base de données
-  Future<List<Thing>> getAllThingsFromDatabase() async {
-    return await DatabaseHelper().getAllThings();
-  }
+  /// Retrieves all "Things" from the database
+  Future<List<Thing>> getAllThingsFromDatabase() async => await DatabaseHelper().getAllThings();
 
-  // Générer un objet aléatoire
+  /// Generates a random "Thing"
   Thing generateRandomThing() {
     final random = Random();
     return Thing(
@@ -90,66 +87,61 @@ class ThingsManager {
     );
   }
 
-  // Remplir la base de données avec des objets aléatoires
+  /// Fills the database with random objects
   Future<void> populateDatabase(int count) async {
     for (int i = 0; i < count; i++) {
       final thing = generateRandomThing();
       await registerThing(thing);
     }
-    _notifyListeners(); // Notifier après ajout en masse
+    _notifyListeners(); // Notify after bulk addition
   }
 
-  // Désenregistrer un objet (supprime aussi les télémétries)
+  /// Unregisters a "Thing" (also deletes telemetry data)
   Future<bool> unregisterThing(String id) async {
     final thing = await DatabaseHelper().getThingById(id);
     if (thing == null) return false;
 
-    // Déconnecter d'abord l'objet
+    // First disconnect the object
     disconnectThing(id);
 
-    // Ensuite, supprimer de la base de données
+    // Then delete it from the database
     await DatabaseHelper().deleteThingWithTelemetry(id);
 
-    _notifyListeners(); //Notifier après suppression
+    _notifyListeners(); // Notify after deletion
     return true;
   }
 
-
-   Future<bool> isConnected(String id) async{
+  /// Checks if a "Thing" is currently connected
+  Future<bool> isConnected(String id) async {
     final thing = await getThingById(id);
     if (thing != null) {
-      if (registeredThings.contains(thing)) {
-        return true;
-      }
-      return false;
+      return registeredThings.contains(thing);
     }
     return false;
   }
 
-  // Récupérer tous les objets connectés
-  List<Thing> getConnectedThings() {
-    return List.unmodifiable(registeredThings);
-  }
+  /// Retrieves all connected "Things"
+  List<Thing> getConnectedThings() => List.unmodifiable(registeredThings);
 
-  // Afficher tous les objets stockés
+  /// Prints all registered objects
   Future<void> printAllThings() async {
     final things = await getAllThingsFromDatabase();
     if (things.isEmpty) {
-      print('Aucun Thing enregistré.');
+      print('No registered Things.');
     } else {
-      print('Liste des Things enregistrés :');
+      print('List of registered Things:');
       for (var thing in things) {
         print(thing);
       }
     }
   }
 
-  // Notifier les abonnés en cas de mise à jour de la liste
+  /// Notifies subscribers about updates to the list
   void _notifyListeners() {
     _thingsStreamController.add(List.unmodifiable(registeredThings));
   }
 
-  // Fermer le StreamController quand on n'en a plus besoin
+  /// Closes the StreamController when no longer needed
   void dispose() {
     _thingsStreamController.close();
   }

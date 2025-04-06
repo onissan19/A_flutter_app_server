@@ -6,33 +6,33 @@ import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
-  // Singleton - Instance unique
+  // Singleton - Unique instance
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
 
-  // Instance unique accessible
+  // Unique instance accessible
   factory DatabaseHelper() => _instance;
 
   DatabaseHelper._internal();
 
-  // Initialisation de la base de données
+  /// Initialize the database if it's not already initialized
   Future<void> init() async {
     if (_database == null) {
-      sqfliteFfiInit(); //
+      sqfliteFfiInit(); // Initialize sqflite FFI
       databaseFactory = databaseFactoryFfi;
       _database = await _initDatabase();
     }
   }
 
-  // Création unique de la base
+  /// One-time creation of the database
   Future<Database> _initDatabase() async {
     final path = join(await getDatabasesPath(), 'app_database.db');
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
-  // Création des tables
+  /// Create the tables in the database
   Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
+    await db.execute(''' 
       CREATE TABLE things (
         id TEXT PRIMARY KEY,
         type TEXT,
@@ -42,7 +42,7 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
+    await db.execute(''' 
       CREATE TABLE telemetry_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         thingId TEXT,
@@ -53,7 +53,7 @@ class DatabaseHelper {
       )
     ''');
 
-    await db.execute('''
+    await db.execute(''' 
       CREATE TABLE app_mobile (
         id TEXT PRIMARY KEY,
         name TEXT,
@@ -64,7 +64,7 @@ class DatabaseHelper {
     ''');
   }
 
-  // Accès sécurisé à la base
+  /// Secure access to the database
   Future<Database> get database async {
     if (_database == null) {
       await init();
@@ -72,7 +72,7 @@ class DatabaseHelper {
     return _database!;
   }
 
-  // 🔹 Ajouter un Thing
+  /// 🔹 Add a Thing into the database
   Future<int> insertThing(Thing thing) async {
     final db = await database;
     return await db.insert(
@@ -82,7 +82,7 @@ class DatabaseHelper {
     );
   }
 
-  // 🔹 Récupérer un Thing par ID
+  /// 🔹 Retrieve a Thing by its ID
   Future<Thing?> getThingById(String id) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -97,7 +97,7 @@ class DatabaseHelper {
     return null;
   }
 
-  // 🔹 Récupérer tous les Things
+  /// 🔹 Retrieve all Things in the database
   Future<List<Thing>> getAllThings() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('things');
@@ -105,13 +105,13 @@ class DatabaseHelper {
     return maps.map((map) => Thing.fromMap(map)).toList();
   }
 
-  // 🔹 Supprimer un Thing
+  /// 🔹 Delete a Thing by its ID
   Future<int> deleteThing(String id) async {
     final db = await database;
     return await db.delete('things', where: 'id = ?', whereArgs: [id]);
   }
 
-  // 🔹 CRUD - TelemetryData
+  /// 🔹 CRUD - Insert TelemetryData into the database
   Future<int> insertTelemetryData(TelemetryData data) async {
     final db = await database;
     return await db.insert(
@@ -121,6 +121,7 @@ class DatabaseHelper {
     );
   }
 
+  /// 🔹 Retrieve telemetry data associated with a Thing by its ID
   Future<List<TelemetryData>> getTelemetryByThingId(String thingId) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -131,6 +132,7 @@ class DatabaseHelper {
     return maps.map((map) => TelemetryData.fromMap(map)).toList();
   }
 
+  /// 🔹 Delete telemetry data by Thing ID
   Future<int> deleteTelemetryByThingId(String thingId) async {
     final db = await database;
     return await db.delete(
@@ -140,7 +142,7 @@ class DatabaseHelper {
     );
   }
 
-  // 🔹 CRUD - AppMobile
+  /// 🔹 CRUD - Insert AppMobile into the database
   Future<int> insertAppMobile(AppMobile app) async {
     final db = await database;
     return await db.insert(
@@ -150,6 +152,7 @@ class DatabaseHelper {
     );
   }
 
+  /// 🔹 Retrieve AppMobile by its ID
   Future<AppMobile?> getAppById(String id) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -163,39 +166,37 @@ class DatabaseHelper {
     return null;
   }
 
+  /// 🔹 Retrieve all AppMobile records
   Future<List<AppMobile>> getAllApps() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('app_mobile');
     return maps.map((map) => AppMobile.fromMap(map)).toList();
   }
 
+  /// 🔹 Delete AppMobile by its ID
   Future<int> deleteAppById(String id) async {
     final db = await database;
     return await db.delete('app_mobile', where: 'id = ?', whereArgs: [id]);
   }
 
-  // 🔹 Fermer la base de données proprement
+  /// 🔹 Close the database properly
   Future<void> close() async {
     if (_database != null) {
       await _database!.close();
-      _database = null; // 🔹 Remettre à null après fermeture
+      _database = null; // 🔹 Set to null after closing
     }
   }
 
+  /// 🔹 Delete a Thing and all its associated telemetry data
+  Future<bool> deleteThingWithTelemetry(String thingId) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // Delete associated telemetry data
+      await txn.delete('telemetry_data', where: 'thingId = ?', whereArgs: [thingId]);
 
-// 🔹 Supprimer un Thing et toutes ses données de télémétrie associées
-Future<bool> deleteThingWithTelemetry(String thingId) async {
-  final db = await database;
-  await db.transaction((txn) async {
-    // Supprimer les données de télémétrie associées
-    await txn.delete('telemetry_data', where: 'thingId = ?', whereArgs: [thingId]);
-
-    // Supprimer le Thing lui-même
-    await txn.delete('things', where: 'id = ?', whereArgs: [thingId]);
-  });
-  return true;
-}
-
-
-
+      // Delete the Thing itself
+      await txn.delete('things', where: 'id = ?', whereArgs: [thingId]);
+    });
+    return true;
+  }
 }

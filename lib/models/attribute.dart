@@ -1,14 +1,18 @@
 /// models/attribute.dart
 class Attribute {
-  ///Peut être un Thing ID ou un App ID
+  /// Can be a Thing ID or an App ID
   String ownerId;
-  ///
+
+  /// The name of the attribute
   String name;
-  ///
+
+  /// The value of the attribute
   String value;
-  ///
-  bool isForApp; // Indique si l'attribut est pour une application ou un objet
-///
+
+  /// Indicates if the attribute is for an application or an object
+  bool isForApp;
+
+  /// Constructor for the [Attribute] class
   Attribute({
     required this.ownerId,
     required this.name,
